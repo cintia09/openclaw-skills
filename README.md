@@ -11,6 +11,7 @@ A curated collection of [OpenClaw](https://github.com/openclaw/openclaw) agent s
 | [xiaomi-speaker-tts](./xiaomi-speaker-tts/) | Xiaomi/Redmi smart speaker TTS via MiNA cloud API | 🌐 |
 | [taobao-product-research](./taobao-product-research/) | 淘宝/天猫商品调研与选品 — 浏览器自动化采集评价 | 🇨🇳 |
 | [xiaohongshu-post](./xiaohongshu-post/) | 小红书创作服务平台发帖（长文/图文） | 🇨🇳 |
+| [image-gen](./image-gen/) | AI image generation via Pollinations.ai (free, no API key) | 🌐 |
 | [task-dispatch](./task-dispatch/) | 子代理任务分配与模型选择策略 | 🇨🇳 |
 
 ## How to Use
