@@ -3,9 +3,11 @@ name: image-gen
 description: AI image generation via Pollinations.ai (free, no API key). Use when the user asks to generate, draw, or create an image/picture/illustration.
 ---
 
-# AI Image Generation
+# AI Image Generation (多后端自动切换)
 
-Generate images from text prompts using Pollinations.ai — completely free, no API key, no registration.
+Generate images from text prompts — completely free, no API key, no registration.
+
+**支持多后端自动降级**：Pollinations → AI Horde → Craiyon → Together.ai
 
 ## Quick Start
 
@@ -22,12 +24,23 @@ Generate images from text prompts using Pollinations.ai — completely free, no 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | prompt | (required) | Text description of the image |
-| output_path | `/tmp/ai_image_<timestamp>.jpg` | Where to save |
+| output_path | `/tmp/ai_image_<timestamp>.png` | Where to save |
 | width | 1024 | Image width in pixels |
 | height | 1024 | Image height in pixels |
-| model | flux | Generation model |
+| model | flux | Generation model (Pollinations only) |
 
-## Available Models
+## 后端优先级
+
+| 后端 | 免费 | 速度 | 质量 | 需API Key |
+|------|------|------|------|-----------|
+| **Pollinations** | ✅ 完全免费 | ⚡ 快 | ⭐⭐⭐⭐ | ❌ |
+| **AI Horde** | ✅ 完全免费 | 🐌 慢(排队) | ⭐⭐⭐ | ❌ (匿名可用) |
+| **Craiyon** | ✅ 完全免费 | 🕐 中等 | ⭐⭐ | ❌ |
+| **Together.ai** | ✅ 有免费额度 | ⚡ 快 | ⭐⭐⭐⭐ | ✅ TOGETHER_API_KEY |
+
+脚本自动按优先级尝试，一个失败就试下一个。
+
+## Available Models (Pollinations)
 
 | Model | Style | Best For |
 |-------|-------|----------|
@@ -44,10 +57,10 @@ After generating, send the image to the user via their messaging channel:
 
 ```
 # Feishu
-message send → channel=feishu, filePath=/tmp/image.jpg, message="description"
+message send → channel=feishu, filePath=/tmp/image.png, message="description"
 
 # Other channels
-message send → channel=telegram/discord/etc, filePath=/tmp/image.jpg
+message send → channel=telegram/discord/etc, filePath=/tmp/image.png
 ```
 
 ## Prompt Tips
@@ -62,14 +75,15 @@ message send → channel=telegram/discord/etc, filePath=/tmp/image.jpg
 
 - No image editing (inpainting, outpainting) — generation only
 - No consistent characters across images
-- Rate limited by Pollinations (generous but not infinite)
+- Rate limited per-backend (Pollinations generous but may temp-ban IPs; AI Horde uses kudos queue)
 - curl needs `-k` flag (skip SSL verify) in some environments
 
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| SSL error (exit code 35) | Ensure `-k` flag in curl |
-| Timeout | Increase `--max-time`, default 120s |
-| Small/corrupt file | Retry, server may be overloaded |
+| SSL error | `-k` flag; or try next backend |
+| Pollinations temp-banned | 等15-30分钟自动恢复; 脚本会自动尝试备选 |
+| AI Horde 排队太久 | 匿名用户优先级低, 高峰可能等3-5分钟 |
+| All backends fail | 手动访问 pollinations.ai / craiyon.com |
 | Chinese prompt garbled | Script handles URL encoding via Python |
