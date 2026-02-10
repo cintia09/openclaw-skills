@@ -1,0 +1,17 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.pyc
+__pycache__/
+*.log
+/tmp/
+
+# Skill bundles (binary zip archives)
+*.skill
+
+# Sensitive - never commit real credentials
+**/secrets/
+**/credentials/
+*.env
