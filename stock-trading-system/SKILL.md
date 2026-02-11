@@ -20,6 +20,10 @@ description: |
 盘中监控(每30min, 9:00-15:30)
   → 采集快照 → 趋势分析 → 持仓管理(ATR自适应止盈/追踪止盈/硬止损)
   → watchlist扫描 → 高分股自动建仓(涨停过滤) → 飞书通知
+
+AI基础设施股票跟踪(每日05:00)
+  → 读取现有跟踪池 → 三模型并行研究(GPT-5.2/Opus-4.5/Opus-4.6)
+  → 3轮交叉质询收敛 → 更新跟踪池+数据持久化 → git push → 飞书日报
 ```
 
 ## 核心模块
@@ -37,6 +41,39 @@ description: |
 | `news_sentiment.py` | 新闻数据源 | `fetch_eastmoney_news()`, `fetch_sina_news()`, `analyze_sentiment()` |
 | `monte_carlo.py` | 蒙特卡洛模拟 | 1000×bootstrap重排，95%置信区间，正收益概率 |
 | `market_regime.py` | 市场状态检测 | 马尔可夫bull/range/bear分类，东方财富指数API |
+
+## AI基础设施股票跟踪模块
+
+### 投资逻辑
+AI发展导致硬盘、内存、芯片等基础设施紧缺，在A股寻找受益标的。
+
+### 跟踪品类(6大类)
+| 品类 | 逻辑 | 示例标的 |
+|------|------|----------|
+| 存储/硬盘 | AI训练推理产生海量数据 | 佰维存储、朗科科技、江波龙 |
+| 内存/DRAM/HBM | AI服务器单台内存用量远超传统 | 兆易创新、北京君正 |
+| 芯片/GPU/ASIC | AI算力核心硬件 | 寒武纪、海光信息 |
+| 服务器/算力 | AI服务器出货量高增 | 浪潮信息、中科曙光 |
+| 光模块/网络 | AI集群互联高速需求 | 中际旭创、新易盛 |
+| IDC/数据中心 | AI算力承载 | 润泽科技、光环新网 |
+
+### 每日流程 (05:00, cron `a00a90f3`)
+1. **读取现有数据**: `ai-infra-tracking/config.json` + 最近日报
+2. **三模型并行研究**: GPT-5.2 + Opus-4.5 + Opus-4.6 独立搜索分析
+   - 标的发现 → 数据采集(股价/PE/PB/财报/新闻/机构) → 估值分析(DCF+相对估值+技术面) → Top 10推荐
+3. **3轮交叉质询**: 分歧追问 → 数据挑战 → 最终Top 5 + "只改一个"投票
+4. **整合输出**: 统一报告 → 更新config.json跟踪池 → 写入daily/YYYY-MM-DD.json → git push → 飞书日报
+
+### 数据文件
+| 文件 | 用途 |
+|------|------|
+| `ai-infra-tracking/config.json` | 跟踪池配置(品类+标的列表) |
+| `ai-infra-tracking/daily/YYYY-MM-DD.json` | 每日分析报告(三模型结果+共识) |
+
+### Git仓库
+- 路径: `/root/.openclaw/workspace/stock-trading/`
+- Remote: `git@github.com:cintia09/stock-trading-bot.git`
+- 每日分析后自动 `git add ai-infra-tracking/ && git commit && git push`
 
 ## 数据文件
 
@@ -139,6 +176,7 @@ description: |
 ### Cron配置
 - **每日复盘**: `32 15 * * 1-5` (Asia/Shanghai), timeout 1800s, delivery=none
 - **盘中监控**: `0,30 9,10,11,13,14,15 * * 1-5` (Asia/Shanghai)
+- **AI基础设施跟踪**: `0 5 * * 1-5` (Asia/Shanghai), timeout 1800s, delivery=none, cron id `a00a90f3`
 - **新闻简报**: 06:00/12:05/18:03 每日
 
 ## 交易决策流程
