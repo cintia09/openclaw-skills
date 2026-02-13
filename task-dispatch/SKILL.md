@@ -69,6 +69,22 @@ description: 子代理任务分配和模型选择策略。分配子任务、选�
 | 搜索-B | `github-copilot/claude-opus-4.5` |
 | 搜索-C | `github-copilot/claude-opus-4.6` |
 
+### 搜索类任务必须使用OSINT skill
+
+**所有需要多渠道搜索、调研、估价、比价、信息收集的任务，子代理的prompt中必须指示使用 osint-investigation skill。** OSINT skill提供系统化的信息收集方法论，比简单web_search更全面。
+
+适用场景：
+- 二手车/商品估价（多平台比价）
+- 市场调研/竞品分析
+- 人物/公司背景调查
+- 事件追踪/舆情分析
+- 价格趋势研究
+
+子代理prompt中加入：
+```
+请先读取 /root/.openclaw/workspace/skills/osint-investigation/SKILL.md，按照OSINT方法论进行系统化信息收集。
+```
+
 ### 流程
 1. **并行派发**：同一任务同时 spawn 3个子代理，相同 prompt
 2. **收集结果**：等待全部完成（sleep 30 + sessions_list轮询，最多8轮/4分钟）
