@@ -64,8 +64,8 @@ description: |
 4. 答案分布要求（单选ABCD均匀，多选各不相同）
 5. "严禁在解析中出现'修正题目''重新设计''答案应为'等字样——如果你发现题目有问题，直接改好题目再输出，不要留下修改痕迹"
 6. "每道选择题必须有且仅有一个正确答案（单选）或一组正确答案（多选），输出前自行验算"
-7. "所有题目必须纯文字可解，不要写'如图所示'"
-8. "公式用 $...$ 和 $$...$$ 格式，不要用 \\(\\) 或 \\[\\]"
+7. "输出LaTeX+TikZ格式，需要图形的题目必须画TikZ图（函数图像、几何图形、立体图形、圆锥曲线等），数学至少10个TikZ图"
+8. "用分段写入法（cat > + cat >>）写LaTeX文件，写完后用xelatex编译验证"
 
 - 串行 spawn（一个完成再下一个），避免 provider slot 竞争
 
@@ -227,8 +227,11 @@ cron add:
 - [ ] 基础题约 50% / 中档 30% / 难题 20%（可按用户要求调整）
 - [ ] 后面题目整体更综合，不要前易后乱
 
-### 5.4 题面质量
-- [ ] 不出现"如图"但无图（或用清晰ASCII/文字可解替代）
+### 5.4 题面质量与图形
+- [ ] 需要配图的题目都有TikZ图形（不能写"如图"但无图）
+- [ ] TikZ图形数量达标（数学≥10，物理≥8，化学≥5）
+- [ ] TikZ图形与题意一致（坐标、标注、方向正确）
+- [ ] LaTeX编译无错误（xelatex通过）
 - [ ] 不出现"让我们重新设计/修正题目/答案应为…"等生成痕迹
 - [ ] 物理/化学单位齐全，数值合理
 
@@ -253,16 +256,57 @@ cron add:
 
 ## 6. 输出规范
 
-### 默认：Markdown
-建议结构：
-- 标题（地区/年级/考试范围/时长/满分）
-- 第I卷/第II卷（如适用）
-- 题目
-- **答案与解析**（可独立分区，便于发"无答案版/有答案版"）
+### ⚠️ 默认输出格式：LaTeX + TikZ（必须带图）
 
-### 可选：LaTeX
-- 适合：需要规范排版、公式、表格、（可选）TikZ 图形
-- 产出：`.tex`（以及编译说明）
+**试卷必须用LaTeX+TikZ生成，不要用Markdown。** Markdown无法嵌入图形，而真实试卷（尤其数学/物理/化学）必须有大量配图。
+
+#### LaTeX+TikZ要求
+- 产出：`.tex` 源文件 → `xelatex` 编译 → PDF
+- **必须包含TikZ图形**，数量要求：
+  - 数学：≥10个图（函数曲线、平面几何、立体几何、圆锥曲线等）
+  - 物理：≥8个图（力学示意图、电路图、光路图、运动轨迹等）
+  - 化学：≥5个图（有机结构式、实验装置示意、晶体结构等）
+  - 其他科目：根据实际需要
+- **模板参考**：`/root/.openclaw/workspace/gaokao/LaTeX版/` 目录下有现成模板
+- **排版规范**：
+  - 使用 `ctex` 宏包处理中文
+  - 使用 `tikz`、`pgfplots` 画图
+  - 使用 `geometry` 控制页边距
+  - 试卷题目和答案解析分页（`\newpage`）
+
+#### LaTeX文件结构模板
+```latex
+\documentclass[12pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{tikz,pgfplots}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usetikzlibrary{calc,patterns,angles,quotes,arrows.meta,3d,positioning}
+\pgfplotsset{compat=1.18}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+% ... 题目内容 ...
+% \newpage
+% ... 参考答案与解析 ...
+\end{document}
+```
+
+#### 编译命令
+```bash
+xelatex -interaction=nonstopmode 试卷.tex
+# 如需交叉引用，跑第二遍
+xelatex -interaction=nonstopmode 试卷.tex
+```
+
+#### 长文件写入策略
+LaTeX试卷通常600-1000行，子代理必须用分段写入法：
+1. `cat > file.tex << 'LATEX_EOF'` 写前半部分（到填空题结束）
+2. `cat >> file.tex << 'LATEX_EOF'` 追加后半部分（解答题+答案+\end{document}）
+3. 写完后立即编译验证
+
+#### Markdown仅作备用
+只在明确不需要图形的场景（如语文作文、英语阅读理解纯文字部分）才用Markdown。即使用Markdown，也必须用pandoc+xelatex转PDF（不要用weasyprint）。
 
 
 ## 7. 参考真题结构（优先级最高）
@@ -295,7 +339,10 @@ cron add:
 15) **pandoc转PDF时公式格式必须统一** → 全用$和$$，不要混用\(\)和\[\]
 16) **交叉质询是最核心环节** → 单模型自审≈自己改自己作业，三模型交叉才能发现盲点。第一轮实测：三个模型生成的数学试卷全部有严重错误（答案矛盾、改题痕迹、条件不足），只有经过交叉质询才能筛出可用题
 17) **验收报告必须量化** → 每题给出"通过/修正/淘汰"状态，不能只说"大致可以"
-18) **文件大小是最快的质检手段** → 正常试卷md文件应>8KB（含解析），<3KB几乎肯定截断了
+18) **文件大小是最快的质检手段** → 正常试卷md文件应>8KB（含解析），LaTeX文件应>15KB，<3KB几乎肯定截断了
+19) **试卷必须用LaTeX+TikZ带图** → Markdown无法嵌入图形，真实试卷必须有配图。之前用Markdown出的试卷被退回因为"没有图片"。数学试卷需要函数曲线、几何图形、立体图形、圆锥曲线图等
+20) **LaTeX模板要先读现有的** → `/root/.openclaw/workspace/gaokao/LaTeX版/` 有成熟模板，子代理必须先读模板再出题，保持排版风格一致
+21) **参考真题风格** → 如有下载的真题（`gaokao/下载试卷/`），提取文本给子代理参考出题风格和难度，但不要抄题
 
 
 ## 9. PDF生成方案
